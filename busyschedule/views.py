@@ -5,7 +5,7 @@ from .models import ClassSchedule
 
 def home(request):
     schedules = ClassSchedule.objects.all().order_by('day', 'start_time')
-    return render(request, 'home.html', {'schedules':'Laura Ortiz'})
+    return render(request, 'home.html', {'schedules': schedules})
 
 def add_schedule(request):
     if request.method == 'POST':

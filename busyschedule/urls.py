@@ -3,5 +3,5 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('agregar/', views.add_schedule, name='add_schedule'),
+    path('add/', views.add_schedule, name='add_schedule'),
 ]
