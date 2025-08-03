@@ -11,7 +11,13 @@
 <h2 class="mb-4">Mi horario</h2>
 <ul class="list-group">
   {% for s in schedules %}
-    <li class="list-group-item">{{ s.day }}: {{ s.start_time }} - {{ s.end_time }}</li>
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+    <span>{{ s.day }}: {{ s.start_time }} - {{ s.end_time }}</span>
+    <span>
+        <a href="{% url 'edit_schedule' s.pk %}" class="btn btn-sm btn-success me-2">Editar</a>
+        <a href="{% url 'delete_schedule' s.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+    </span>
+    </li>
   {% empty %}
     <li class="list-group-item text-muted">No tienes horarios registrados.</li>
   {% endfor %}
