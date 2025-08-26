@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Bienvenido - estudIAntes{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="fw-bold mb-4">Bienvenido a estudIAntes</h1>
+  <p class="lead mb-5">Organiza tus horarios, gestiona tu disponibilidad y simplifica tu estudio.</p>
+
+  <div class="d-flex justify-content-center gap-3 flex-wrap">
+    <a href="{% url 'schedule_home' %}" class="btn btn-primary btn-lg px-4">Agregar Horarios</a>
+    <a href="{% url 'routine' %}" class="btn btn-outline-light btn-lg px-4">Ver rutina</a>
+  </div>
+</div>
+{% endblock %}

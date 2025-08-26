@@ -1,25 +1,282 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Agregar horario</title>
-    <!-- Bootstrap CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-5">
+{% extends "base.html" %}
 
-<h2 class="mb-4">Mi horario</h2>
-<ul class="list-group">
-  {% for s in schedules %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-    <span>{{ s.day }}: {{ s.start_time }} - {{ s.end_time }}</span>
-    <span>
-        <a href="{% url 'edit_schedule' s.pk %}" class="btn btn-sm btn-success me-2">Editar</a>
-        <a href="{% url 'delete_schedule' s.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
-    </span>
-    </li>
-  {% empty %}
-    <li class="list-group-item text-muted">No tienes horarios registrados.</li>
-  {% endfor %}
-</ul>
-<a href="{% url 'schedule' %}" class="btn btn-success mt-4">Agregar horario</a>
+{% block title %}Mis horarios{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <!-- mensajes -->
+  {% if messages %}
+    <div class="col-12">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Columna izquierda: formularios -->
+  <div class="col-md-5">
+    <!-- Formulario de horarios ocupados -->
+    <div class="card shadow-sm p-4 mb-4">
+      <h4 class="mb-3">Agregar horario ocupado</h4>
+      {% if form_schedule.errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          {{ form_schedule.errors }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      {% endif %} 
+      <form method="post" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <div class="col-5">
+          <label class="form-label">Día</label>
+          {{ form_schedule.day }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Inicio</label>
+          {{ form_schedule.start_time }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Fin</label>
+          {{ form_schedule.end_time }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Materia / Motivo</label>
+          {{ form_schedule.subject }}
+        </div>
+        <div class="col-12">
+          <button type="submit" name="save_schedule" class="btn btn-primary w-100">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Formulario de disponibilidad -->
+    <div class="card shadow-sm p-4 mb-4">
+      <h4 class="mb-3">Agregar disponibilidad</h4>
+      {% if form_block.errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <strong>¡Atención!</strong> Corrige los siguientes errores:<br>
+          {{ form_block.errors }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+      {% endif %}
+      <form method="post" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <div class="col-5">
+          <label class="form-label">Día</label>
+          {{ form_block.day }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Inicio</label>
+          {{ form_block.start_time }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Fin</label>
+          {{ form_block.end_time }}
+        </div>
+        <div class="col-12">
+          <button type="submit" name="save_block" class="btn btn-success w-100">Guardar disponibilidad</button>
+        </div>
+      </form>
+    </div>
+  </div> <!-- 🔹 Cierre de columna izquierda -->
+
+  <!-- Columna derecha: visualizaciones -->
+  <div class="col-md-7">
+    <!-- Horarios ocupados -->
+    <h4 class="mb-3">Horarios ocupados</h4>
+    <div class="card shadow-sm mb-4">
+      <ul class="list-group list-group-flush">
+        {% for s in schedules %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <strong>{{ s.subject }}</strong><br>
+              {{ s.day }}: {{ s.start_time }} - {{ s.end_time }}
+            </span>
+            <div>
+              <button class="btn btn-sm btn-success me-2"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal"
+                      data-schedule-id="{{ s.pk }}">
+                Editar
+              </button>
+              <button class="btn btn-sm btn-danger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal"
+                      data-schedule-id="{{ s.pk }}"
+                      data-schedule-info="{{ s.day }}: {{ s.start_time }} - {{ s.end_time }}">
+                Eliminar
+              </button>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No tienes horarios registrados.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Bloques disponibles -->
+    <h4 class="mb-3">Bloques disponibles</h4>
+    <div class="card shadow-sm p-3">
+      {% if blocks_by_day %}
+        {% for day, day_blocks in blocks_by_day.items %}
+          <div class="mb-3 border rounded p-2">
+            <h6 class="fw-bold">{{ day }}</h6>
+            <ul class="list-group list-group-flush">
+              {% for b in day_blocks %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>{{ b.start_time }} - {{ b.end_time }}</span>
+                  <button class="btn btn-sm btn-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deleteBlockModal"
+                          data-block-id="{{ b.pk }}"
+                          data-block-info="{{ day }}: {{ b.start_time }} - {{ b.end_time }}">
+                    Eliminar
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted">Sin bloques disponibles</p>
+      {% endif %}
+    </div>
+  </div> <!-- 🔹 Cierre de columna derecha -->
+
+  <!-- Modales -->
+  <!-- Modal eliminar -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" id="deleteForm">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Confirmar eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="scheduleInfo" class="fw-bold"></p>
+            <p>¿Estás seguro de que deseas eliminar este horario?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal eliminar bloque disponible -->
+  <div class="modal fade" id="deleteBlockModal" tabindex="-1" aria-labelledby="deleteBlockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" id="deleteBlockForm">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteBlockModalLabel">Confirmar eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="blockInfo" class="fw-bold"></p>
+            <p>¿Estás seguro de que deseas eliminar este bloque disponible?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal editar -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Editar horario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" id="editFormContainer">
+          <!-- formulario -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="saveEdit">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> <!-- 🔹 Cierre de row -->
+
+<!-- 🔹 Toasts para mensajes AJAX -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div id="toastMessage" class="toast align-items-center text-bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastBody">Mensaje</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Modal eliminar
+  const deleteModal = document.getElementById('deleteModal')
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget
+    const scheduleId = button.getAttribute('data-schedule-id')
+    const scheduleInfo = button.getAttribute('data-schedule-info')
+    document.getElementById('scheduleInfo').textContent = scheduleInfo
+    document.getElementById('deleteForm').action = `/delete/${scheduleId}/`
+  })
+
+  // Modal eliminar bloque
+  const deleteBlockModal = document.getElementById('deleteBlockModal')
+  deleteBlockModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget
+    const blockId = button.getAttribute('data-block-id')
+    const blockInfo = button.getAttribute('data-block-info')
+    document.getElementById('blockInfo').textContent = blockInfo
+    document.getElementById('deleteBlockForm').action = `/delete-block/${blockId}/`
+  })
+
+  // Modal editar
+  const editModal = document.getElementById('editModal')
+  editModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget
+    const scheduleId = button.getAttribute('data-schedule-id')
+    fetch(`/edit/${scheduleId}/modal/`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('editFormContainer').innerHTML = data.html_form
+        document.getElementById('saveEdit').onclick = function () {
+          const form = document.getElementById('editForm')
+          const formData = new FormData(form)
+          fetch(`/edit/${scheduleId}/modal/`, {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              if (data.message) {
+                document.getElementById('toastBody').innerText = data.message
+                const toastEl = document.getElementById('toastMessage')
+                const toast = new bootstrap.Toast(toastEl)
+                toast.show()
+              }
+              setTimeout(() => location.reload(), 1500)
+            } else {
+              document.getElementById('editFormContainer').innerHTML = data.html_form
+            }
+          })
+        }
+      })
+  })
+</script>
+{% endblock %}
